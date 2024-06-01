@@ -1,5 +1,12 @@
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.HashSet;
 
+// This class and its methods assume the following precondition:
+// Precondition: f contains non-zero coefficients and power array length = coeff array length
 public class Polynomial {
     double[] coefficients;
     int[] powers;
@@ -19,7 +26,29 @@ public class Polynomial {
         this.powers = powers.clone();
     }
 
-    // Precondition: f contains non-zero coefficients and power array length = coeff array length
+    public Polynomial(File file) throws IOException {
+        String polynomial = Files.readAllLines(file.toPath()).get(0);
+        String[] terms = polynomial.split("[+\\-]");
+        double[] coeff = new double[terms.length];
+        int[] pows = new int[terms.length];
+
+        for (int i = 0; i < terms.length; i++) {
+            String term = terms[i];
+            boolean hasX = term.contains("x");
+            String[] coefficientThenPower = term.split("x");
+            if (coefficientThenPower.length == 1) {
+                // if there is a match, then it is "%dx", if not then it is "%d"
+                coeff[i] = Double.parseDouble(coefficientThenPower[0]);
+                pows[i] = hasX ? 1 : 0;
+            } else {
+                coeff[i] = Double.parseDouble(coefficientThenPower[0]);
+                pows[i] = Integer.parseInt(coefficientThenPower[1]);
+            }
+        }
+        this.coefficients = coeff;
+        this.powers = pows;
+    }
+
     public Polynomial add(Polynomial f) {
         if (f.isZeroPolynomial()) {
             return this;
@@ -114,11 +143,18 @@ public class Polynomial {
         return result;
     }
 
+    public void saveToFile(String fileName) throws IOException {
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(fileName))) {
+            w.write(this.toString());
+        }
+    }
+
     public String toString() {
         StringBuilder representation = new StringBuilder();
         boolean empty = true;
         for (int i = 0; i < powers.length; i++) {
-            String format = i == 0 ? "%fx^%d " : "+ %fx^%d ";
+            String sign = coefficients[i] < 0 ? "" : "+"; // if it is -ve, then the coefficient already has -
+            String format = i == 0 ? "%.1fx%d" : sign + "%.1fx%d";
             representation.append(String.format(format, coefficients[i], powers[i]));
             empty = false;
         }
