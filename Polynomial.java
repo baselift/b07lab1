@@ -1,52 +1,56 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.HashSet;
 
 // This class and its methods assume the following precondition:
-// Precondition: f contains non-zero coefficients and power array length = coeff array length
+// f contains non-zero coefficients and power array length = coeff array length
 public class Polynomial {
     double[] coefficients;
     int[] powers;
 
     public Polynomial() {
-        this.coefficients = new double[]{};
-        this.powers = new int[]{};
-    }
-
-    public Polynomial(int maxDegree) {
-        this.coefficients = new double[maxDegree];
-        this.powers = new int[maxDegree];
+        this.coefficients = null;
+        this.powers = null;
     }
 
     public Polynomial(double[] coefficients, int[] powers) {
-        this.coefficients = coefficients.clone();
-        this.powers = powers.clone();
+        if (coefficients.length == 0 || powers.length == 0) {
+            this.coefficients = null;
+            this.powers = null;
+        } else {
+            this.coefficients = coefficients.clone();
+            this.powers = powers.clone();
+        }
     }
 
     public Polynomial(File file) throws IOException {
-        String polynomial = Files.readAllLines(file.toPath()).get(0);
-        String[] terms = polynomial.split("[+\\-]");
-        double[] coeff = new double[terms.length];
-        int[] pows = new int[terms.length];
-
-        for (int i = 0; i < terms.length; i++) {
-            String term = terms[i];
-            boolean hasX = term.contains("x");
-            String[] coefficientThenPower = term.split("x");
-            if (coefficientThenPower.length == 1) {
-                // if there is a match, then it is "%dx", if not then it is "%d"
-                coeff[i] = Double.parseDouble(coefficientThenPower[0]);
-                pows[i] = hasX ? 1 : 0;
+        try (BufferedReader r = Files.newBufferedReader(file.toPath())) {
+            String polynomial = r.readLine();
+            if (polynomial.equals("0")) {
+                this.coefficients = null;
+                this.powers = null;
             } else {
-                coeff[i] = Double.parseDouble(coefficientThenPower[0]);
-                pows[i] = Integer.parseInt(coefficientThenPower[1]);
+                String[] terms = polynomial.split("[+]|(?<=.)(?=-)");
+                double[] coeff = new double[terms.length];
+                int[] pows = new int[terms.length];
+
+                for (int i = 0; i < terms.length; i++) {
+                    String term = terms[i];
+                    boolean hasX = term.contains("x");
+                    String[] coefficientThenPower = term.split("x");
+                    if (coefficientThenPower.length == 1) {
+                        // if there is a match, then it is "%dx", if not then it is "%d"
+                        coeff[i] = Double.parseDouble(coefficientThenPower[0]);
+                        pows[i] = hasX ? 1 : 0;
+                    } else {
+                        coeff[i] = Double.parseDouble(coefficientThenPower[0]);
+                        pows[i] = Integer.parseInt(coefficientThenPower[1]);
+                    }
+                }
+                this.coefficients = coeff;
+                this.powers = pows;
             }
         }
-        this.coefficients = coeff;
-        this.powers = pows;
     }
 
     public Polynomial add(Polynomial f) {
@@ -113,10 +117,13 @@ public class Polynomial {
     }
 
     public boolean isZeroPolynomial() {
-        return (powers.length == 0 || coefficients.length == 0);
+        return (powers == null || coefficients == null);
     }
 
     public double evaluate(double x) {
+        if (isZeroPolynomial()) {
+            return 0;
+        }
         double result = 0;
 
         for (int i = 0; i < coefficients.length; i++) {
@@ -131,14 +138,21 @@ public class Polynomial {
     }
 
     public Polynomial multiply(Polynomial f) {
+        if (f.isZeroPolynomial()) {
+            return f;
+        } else if (isZeroPolynomial()) {
+            return this;
+        }
+
         Polynomial result = new Polynomial();
         for (int thisIndex = 0; thisIndex < powers.length; thisIndex++) {
-            Polynomial intermediate = new Polynomial(f.powers.length);
+            double[] intermediateCoeff = new double[f.powers.length];
+            int[] intermediatePowers = new int[f.powers.length];
             for (int fIndex = 0; fIndex < f.powers.length; fIndex++) {
-                intermediate.powers[fIndex] = powers[thisIndex] + f.powers[fIndex];
-                intermediate.coefficients[fIndex] = coefficients[thisIndex] * f.coefficients[fIndex];
+                intermediatePowers[fIndex] = powers[thisIndex] + f.powers[fIndex];
+                intermediateCoeff[fIndex] = coefficients[thisIndex] * f.coefficients[fIndex];
             }
-            result = result.add(intermediate);
+            result = result.add(new Polynomial(intermediateCoeff, intermediatePowers));
         }
         return result;
     }
@@ -150,14 +164,17 @@ public class Polynomial {
     }
 
     public String toString() {
+        if (isZeroPolynomial()) {
+            return "0";
+        }
+
         StringBuilder representation = new StringBuilder();
-        boolean empty = true;
         for (int i = 0; i < powers.length; i++) {
             String sign = coefficients[i] < 0 ? "" : "+"; // if it is -ve, then the coefficient already has -
-            String format = i == 0 ? "%.1fx%d" : sign + "%.1fx%d";
+            String format = i == 0 ? "%.1f" : sign + "%.1f"; // if it is the first term, then we do not need to add sign
+            format += (powers[i] == 0 ? "" : "x%d"); // if power is 0, then do not add extra x^power part
             representation.append(String.format(format, coefficients[i], powers[i]));
-            empty = false;
         }
-        return empty ? "0" : representation.toString();
+        return representation.toString();
     }
 }
