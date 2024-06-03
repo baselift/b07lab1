@@ -111,8 +111,6 @@ public class Driver {
         System.out.println(unequalNumberOfTerms);
     }
 
-
-
     public static void testMultiply() throws IOException {
         System.out.println("testMultiply");
         Polynomial f = new Polynomial(new double[]{1, 2}, new int[]{4, 5}); // x^4 + 2x^5

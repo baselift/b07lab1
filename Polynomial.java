@@ -54,7 +54,7 @@ public class Polynomial {
     }
 
     public Polynomial add(Polynomial f) {
-        if (f.isZeroPolynomial()) {
+        if (f == null || f.isZeroPolynomial()) {
             return this;
         } else if (isZeroPolynomial()) {
             return f;
@@ -138,7 +138,7 @@ public class Polynomial {
     }
 
     public Polynomial multiply(Polynomial f) {
-        if (f.isZeroPolynomial()) {
+        if (f == null || f.isZeroPolynomial()) {
             return f;
         } else if (isZeroPolynomial()) {
             return this;
